@@ -31,12 +31,12 @@ def page_not_found(e):
 
 @sock.route("/echo")
 def echo(ws):
+    for player in players.values():
+        ws.send(json.dumps(player))
     i = len(change_list)
     while True:
-        ws_data = ws.receive()
-        if ws_data:
-            print(ws_data)
-            data = json.loads(ws_data)
+        if raw_data := ws.receive():
+            data = json.loads(raw_data)
 
             if players.get(data["username"]) is None:
                 players[data["username"]] = {**DEFAULT_VALUES, **data}
