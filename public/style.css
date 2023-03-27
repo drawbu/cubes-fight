@@ -1,0 +1,24 @@
+* {
+  margin: 0;
+  padding: 0;
+}
+
+html  {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.player {
+  height: 100px;
+  width: 100px;
+  background-color: indianred;
+  position: absolute;
+  left: 300px;
+  top: 300px;
+}
+
+.player#player {
+  background-color: lightskyblue;
+}

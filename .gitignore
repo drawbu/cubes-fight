@@ -1,0 +1,14 @@
+# IDE config files
+.idea/
+.vscode/
+
+# Python env
+__pycache__/
+.venv/
+venv/
+
+# Flask
+.flaskenv/
+
+# User data
+data/
