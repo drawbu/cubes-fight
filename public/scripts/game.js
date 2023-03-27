@@ -99,9 +99,7 @@ setInterval(() => {
     },
     body: JSON.stringify(data)
   })
-    .then(res => {
-      return res.ok ? res.json() : undefined;
-    })
+    .then(res => res.ok ? res.json() : undefined)
     .then(players => {
       if (!players) {
         return;
@@ -109,11 +107,11 @@ setInterval(() => {
 
       /* Update existing players position */
       document.querySelectorAll('.player').forEach((element) => {
-        const username = element.dataset.value;
-        if (username !== player.element.dataset.value) {
-          updatePlayer(element, players[username]);
+        const name = element.dataset.value;
+        if (name !== username) {
+          updatePlayer(element, players[name]);
         }
-        delete players[username];
+        delete players[name];
       })
 
       /* Create new players */
