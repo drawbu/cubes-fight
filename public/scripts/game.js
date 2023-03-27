@@ -7,16 +7,16 @@ while (!username) {
 
 // Let the game started
 const player = {
-  element: document.createElement('div'),
-  position: { x: 300, y: 300 },
-  direction: { x: 300, y: 300 },
+  x: 300,
+  y: 300,
   angle: 0,
+  element: undefined,
+  direction: { x: undefined, y: undefined },
 };
-player.element.className = "player"
+player.element = createPlayer(username, player)
 player.element.id = "player"
-player.element.dataset.value = username
-
-document.querySelector('body').appendChild(player.element)
+player.direction.x = player.x;
+player.direction.y = player.y;
 
 let lastAngle = 0;
 
@@ -57,33 +57,33 @@ window.addEventListener('keydown', (event) => {
 setInterval(() => {
   const move = {
     speed: 20,
-    x: Math.abs(player.position.x - player.direction.x),
-    y: Math.abs(player.position.y - player.direction.y),
+    x: Math.abs(player.x - player.direction.x),
+    y: Math.abs(player.y - player.direction.y),
   };
   move.movementX = Math.round(move.x / (move.x + move.y) * move.speed);
   move.movementY = move.speed - move.movementX;
 
-  if (player.position.x < player.direction.x) {
-    player.position.x += Math.min(move.movementX, player.direction.x - player.position.x);
-  } else if (player.position.x > player.direction.x) {
-    player.position.x -= Math.min(move.movementX, player.position.x - player.direction.x);
+  if (player.x < player.direction.x) {
+    player.x += Math.min(move.movementX, player.direction.x - player.x);
+  } else if (player.x > player.direction.x) {
+    player.x -= Math.min(move.movementX, player.x - player.direction.x);
   }
 
-  if (player.position.y < player.direction.y) {
-    player.position.y += Math.min(move.movementY, player.direction.y - player.position.y);
-  } else if (player.position.y > player.direction.y) {
-    player.position.y -= Math.min(move.movementY, player.position.y - player.direction.y);
+  if (player.y < player.direction.y) {
+    player.y += Math.min(move.movementY, player.direction.y - player.y);
+  } else if (player.y > player.direction.y) {
+    player.y -= Math.min(move.movementY, player.y - player.direction.y);
   }
 
   /* Update the position */
   const data = {username: player.element.dataset.value}
   if (move.x !== 0) {
-    player.element.style.left = `${player.position.x}px`;
-    data.x = player.position.x;
+    player.element.style.left = `${player.x}px`;
+    data.x = player.x;
   }
   if (move.y !== 0) {
-    player.element.style.top = `${player.position.y}px`;
-    data.y = player.position.y;
+    player.element.style.top = `${player.y}px`;
+    data.y = player.y;
   }
   if (lastAngle !== player.angle) {
     player.element.style.transform = `rotate(${player.angle}rad)`;
@@ -110,30 +110,33 @@ setInterval(() => {
       /* Update existing players position */
       document.querySelectorAll('.player').forEach((element) => {
         const username = element.dataset.value;
-        if (username === player.element.dataset.value) {
-          delete players[username];
-          return;
+        if (username !== player.element.dataset.value) {
+          updatePlayer(element, players[username]);
         }
-        if (!(username in Object.keys(players))) {
-          element.remove()
-          return;
-        }
-        element.style.left = `${players[username].x}px`;
-        element.style.top = `${players[username].y}px`;
-        element.style.transform = `rotate(${players[username].angle}rad)`;
         delete players[username];
       })
 
       /* Create new players */
       Object.keys(players).forEach((username) => {
-        const newPlayer = document.createElement('div');
-        newPlayer.className = "player"
-        newPlayer.dataset.value = username
-        newPlayer.style.left = `${players[username].x}px`;
-        newPlayer.style.top = `${players[username].y}px`;
-        newPlayer.style.transform = `rotate(${players[username].angle}rad)`;
-
-        document.querySelector('body').appendChild(newPlayer)
+        createPlayer(username, players[username]);
       })
   });
 }, 50);
+
+function createPlayer(username, data) {
+  const newPlayer = document.createElement('div');
+  newPlayer.className = 'player';
+  newPlayer.dataset.value = username;
+  newPlayer.style.left = `${data.x}px`;
+  newPlayer.style.top = `${data.y}px`;
+  newPlayer.style.transform = `rotate(${data.angle}rad)`;
+
+  document.querySelector('body').appendChild(newPlayer);
+  return newPlayer;
+}
+
+function updatePlayer(element, data) {
+  element.style.left = `${data.x}px`;
+  element.style.top = `${data.y}px`;
+  element.style.transform = `rotate(${data.angle}rad)`;
+}
