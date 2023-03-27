@@ -1,10 +1,14 @@
 import json
 from typing import Dict
 
-from flask import Flask, send_from_directory, request, jsonify
+from flask import Flask, send_from_directory
+from flask_sock import Sock
+
 
 app = Flask(__name__)
+sock = Sock(app)
 players: Dict[str, dict] = {}
+change_list = []
 DEFAULT_VALUES = {"x": 300, "y": 300, "angle": 0}
 
 
@@ -25,18 +29,24 @@ def page_not_found(e):
     return "Page not found :/", 404
 
 
-@app.route('/update-player', methods=['POST'])
-def upload_files():
-    data = json.loads(request.data)
-    username = data["username"]
-    del data["username"]
+@sock.route("/echo")
+def echo(ws):
+    i = len(change_list)
+    while True:
+        ws_data = ws.receive()
+        if ws_data:
+            print(ws_data)
+            data = json.loads(ws_data)
 
-    if players.get(username) is None:
-        players[username] = {**DEFAULT_VALUES, **data}
-    else:
-        players[username].update(data)
-
-    return jsonify(players)
+            if players.get(data["username"]) is None:
+                players[data["username"]] = {**DEFAULT_VALUES, **data}
+            else:
+                players[data["username"]].update(data)
+            change_list.append(data["username"])
+            i += 1
+        if i < len(change_list):
+            ws.send(json.dumps(players[change_list[i]]))
+            i += 1
 
 
 if __name__ == "__main__":

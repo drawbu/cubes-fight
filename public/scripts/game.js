@@ -6,6 +6,9 @@ while (!username) {
 
 
 // Let the game started
+const socket = new WebSocket('ws://' + location.host + '/echo');
+
+
 const player = {
   x: 300,
   y: 300,
@@ -14,7 +17,7 @@ const player = {
   direction: { x: undefined, y: undefined },
 };
 player.element = createPlayer(username, player)
-player.element.id = "player"
+player.element.id = 'player'
 player.direction.x = player.x;
 player.direction.y = player.y;
 
@@ -75,8 +78,8 @@ setInterval(() => {
     player.y -= Math.min(move.movementY, player.y - player.direction.y);
   }
 
-  /* Update the position */
-  const data = {username: player.element.dataset.value}
+  // Update the position
+  const data = {}
   if (move.x !== 0) {
     player.element.style.left = `${player.x}px`;
     data.x = player.x;
@@ -90,36 +93,25 @@ setInterval(() => {
     lastAngle = player.angle;
     data.angle = player.angle;
   }
-
-  /* Update position and get all player positions */
-  fetch('/update-player', {
-    method: 'post',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(data)
-  })
-    .then(res => res.ok ? res.json() : undefined)
-    .then(players => {
-      if (!players) {
-        return;
-      }
-
-      /* Update existing players position */
-      document.querySelectorAll('.player').forEach((element) => {
-        const name = element.dataset.value;
-        if (name !== username) {
-          updatePlayer(element, players[name]);
-        }
-        delete players[name];
-      })
-
-      /* Create new players */
-      Object.keys(players).forEach((username) => {
-        createPlayer(username, players[username]);
-      })
-  });
+  if (Object.keys(data).length !== 0) {
+    data.username = player.element.dataset.value;
+    socket.send(JSON.stringify(data));
+  }
 }, 50);
+
+socket.addEventListener('message', ev => {
+  const data = JSON.parse(ev.data);
+  if (data.username === username) {
+    return;
+  }
+  const element = document.querySelector(`[data-value="${data.username}"]`);
+  if (element) {
+    updatePlayer(element, data);
+  }
+  else {
+    createPlayer(data.username, data);
+  }
+});
 
 function createPlayer(username, data) {
   const newPlayer = document.createElement('div');
