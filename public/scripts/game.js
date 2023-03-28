@@ -53,6 +53,19 @@ window.addEventListener('keydown', (event) => {
   console.log(`KeyboardEvent: key='${event.key}' | code='${event.code}'`);
 });
 
+window.addEventListener('beforeunload', () => {
+  socket.close();
+});
+
+socket.addEventListener('open', (event) => {
+  socket.send(JSON.stringify({ username, x: player.x, y: player.y, angle: player.angle }));
+});
+
+socket.addEventListener('close', (event) => {
+  clearInterval(interval);
+  console.log('WebSocket is closed now.');
+});
+
 socket.addEventListener('message', ev => {
   const data = JSON.parse(ev.data);
   if (data.username === username) {
@@ -69,7 +82,7 @@ socket.addEventListener('message', ev => {
 
 
 // Main loop
-setInterval(() => {
+const interval = setInterval(() => {
   const move = {
     speed: 20,
     x: Math.abs(player.x - player.direction.x),
@@ -93,11 +106,9 @@ setInterval(() => {
   // Update the position
   const data = {}
   if (move.x !== 0) {
-    player.element.style.left = `${player.x}px`;
     data.x = player.x;
   }
   if (move.y !== 0) {
-    player.element.style.top = `${player.y}px`;
     data.y = player.y;
   }
   if (lastAngle !== player.angle) {
