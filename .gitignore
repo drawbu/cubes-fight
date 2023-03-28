@@ -8,7 +8,7 @@ __pycache__/
 venv/
 
 # Flask
-.flaskenv/
+.flaskenv
 
 # User data
 data/
