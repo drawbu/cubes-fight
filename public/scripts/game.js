@@ -105,6 +105,7 @@ setInterval(() => {
     data.angle = player.angle;
   }
   if (Object.keys(data).length !== 0) {
+    updatePlayer(player.element, { x: data.x, y: data.y });
     data.username = player.element.dataset.value;
     socket.send(JSON.stringify(data));
   }
@@ -123,7 +124,13 @@ function createPlayer(username, data) {
 }
 
 function updatePlayer(element, data) {
-  element.style.left = `${data.x}px`;
-  element.style.top = `${data.y}px`;
-  element.style.transform = `rotate(${data.angle}rad)`;
+  if (data.x !== undefined) {
+    element.style.left = `${data.x}px`;
+  }
+  if (data.y !== undefined) {
+    element.style.top = `${data.y}px`;
+  }
+  if (data.angle !== undefined) {
+    element.style.transform = `rotate(${data.angle}rad)`;
+  }
 }
