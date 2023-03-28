@@ -1,12 +1,14 @@
 import json
 from typing import Dict
 
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, request
 from flask_sock import Sock
+from simple_websocket import Server
 
 
 app = Flask(__name__)
 sock = Sock(app)
+app.config["SOCK_SERVER_OPTIONS"] = {"ping_interval": 25}
 players: Dict[str, dict] = {}
 change_list = []
 DEFAULT_VALUES = {"x": 300, "y": 300, "angle": 0}
@@ -30,7 +32,8 @@ def page_not_found(e):
 
 
 @sock.route("/echo")
-def echo(ws):
+def echo(ws: Server):
+    connected = False
     for player in players.values():
         ws.send(json.dumps(player))
     i = len(change_list)
@@ -44,6 +47,14 @@ def echo(ws):
                 players[data["username"]].update(data)
             change_list.append(data["username"])
             i += 1
+            if not connected:
+                print(
+                    "New player - "
+                    f"ip=\"{request.remote_addr}\" - "
+                    f"username=\"{data.get('username')}\""
+                )
+                connected = True
+
         if i < len(change_list):
             ws.send(json.dumps(players[change_list[i]]))
             i += 1
