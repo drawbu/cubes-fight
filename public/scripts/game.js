@@ -6,9 +6,6 @@ while (!username) {
 
 
 // Let the game started
-const socket = new WebSocket('ws://' + location.host + '/echo');
-
-
 const player = {
   x: 300,
   y: 300,
@@ -22,7 +19,7 @@ player.direction.x = player.x;
 player.direction.y = player.y;
 
 let lastAngle = 0;
-
+const socket = new WebSocket('ws://' + location.host + '/echo');
 
 // Get the player list
 const playerList = [];
@@ -54,6 +51,20 @@ window.addEventListener('mouseup', (event) => {
 
 window.addEventListener('keydown', (event) => {
   console.log(`KeyboardEvent: key='${event.key}' | code='${event.code}'`);
+});
+
+socket.addEventListener('message', ev => {
+  const data = JSON.parse(ev.data);
+  if (data.username === username) {
+    return;
+  }
+  const element = document.querySelector(`[data-value="${data.username}"]`);
+  if (element) {
+    updatePlayer(element, data);
+  }
+  else {
+    createPlayer(data.username, data);
+  }
 });
 
 
@@ -98,20 +109,6 @@ setInterval(() => {
     socket.send(JSON.stringify(data));
   }
 }, 50);
-
-socket.addEventListener('message', ev => {
-  const data = JSON.parse(ev.data);
-  if (data.username === username) {
-    return;
-  }
-  const element = document.querySelector(`[data-value="${data.username}"]`);
-  if (element) {
-    updatePlayer(element, data);
-  }
-  else {
-    createPlayer(data.username, data);
-  }
-});
 
 function createPlayer(username, data) {
   const newPlayer = document.createElement('div');
