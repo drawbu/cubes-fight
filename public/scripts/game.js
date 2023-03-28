@@ -39,7 +39,7 @@ function getCenterCoordinates(element) {
 window.addEventListener('mousemove', (event) => {
   const center = getCenterCoordinates(player.element);
   player.angle = Math.atan2(event.clientY - center.y, event.clientX - center.x);
-  player.element.style.transform = `rotate(${player.angle}rad)`;
+  updatePlayer(player.element, { angle: player.angle })
 });
 
 window.addEventListener('mouseup', (event) => {
