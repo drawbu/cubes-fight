@@ -2,16 +2,13 @@ import json
 from typing import Dict
 
 from flask import Flask, send_from_directory, request
-from flask_sock import Sock
-from simple_websocket import Server
+from simple_websocket import Server, ConnectionClosed, ConnectionError
 
 
 app = Flask(__name__)
-sock = Sock(app)
-app.config["SOCK_SERVER_OPTIONS"] = {"ping_interval": 25}
 players: Dict[str, dict] = {}
 change_list = []
-DEFAULT_VALUES = {"x": 300, "y": 300, "angle": 0}
+DEFAULT_VALUES = {"x": 300, "y": 300, "angle": 0, "alive": True}
 
 
 # Path for our main page
@@ -31,33 +28,60 @@ def page_not_found(e):
     return "Page not found :/", 404
 
 
-@sock.route("/echo")
-def echo(ws: Server):
-    connected = False
-    for player in players.values():
-        ws.send(json.dumps(player))
-    i = len(change_list)
-    while True:
-        if raw_data := ws.receive():
-            data = json.loads(raw_data)
+@app.route('/echo', websocket=True)
+def echo():
+    ws = Server(request.environ)
+    username = ""
+    try:
+        connected = False
+        for player in players.values():
+            ws.send(json.dumps(player))
+        i = len(change_list)
+        while True:
+            if i < len(change_list):
+                user_change = change_list[i]
+                i += 1
+                if user_change == username:
+                    continue
+                if user_change not in players:
+                    ws.send(json.dumps({
+                        "username": user_change,
+                        "alive": False
+                    }))
+                    continue
+                ws.send(json.dumps(players[user_change]))
 
-            if players.get(data["username"]) is None:
-                players[data["username"]] = {**DEFAULT_VALUES, **data}
-            else:
-                players[data["username"]].update(data)
-            change_list.append(data["username"])
-            i += 1
+            raw_data = ws.receive()
+            if not raw_data:
+                continue
+            data = json.loads(raw_data)
+            if not data.get('username'):
+                continue
             if not connected:
+                username = data["username"]
                 print(
                     "New player - "
                     f"ip=\"{request.remote_addr}\" - "
-                    f"username=\"{data.get('username')}\""
+                    f"username=\"{username}\""
                 )
                 connected = True
 
-        if i < len(change_list):
-            ws.send(json.dumps(players[change_list[i]]))
+            if players.get(username) is None:
+                players[username] = {**DEFAULT_VALUES, **data}
+            else:
+                players[username].update(data)
+            change_list.append(username)
             i += 1
+    except ConnectionClosed:
+        pass
+    except ConnectionError:
+        pass
+    if username:
+        del players[username]
+        change_list.append(username)
+        print(f"Player \"{username}\" disconnected")
+    request.close()
+    return ""
 
 
 if __name__ == "__main__":
