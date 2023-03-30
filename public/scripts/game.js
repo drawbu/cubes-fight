@@ -10,6 +10,7 @@ const player = {
   x: 300,
   y: 300,
   angle: 0,
+  alive: true,
   element: undefined,
   direction: { x: undefined, y: undefined },
 };
@@ -116,7 +117,7 @@ const interval = setInterval(() => {
     data.angle = player.angle;
   }
   if (Object.keys(data).length !== 0) {
-    updatePlayer(player.element, { x: data.x, y: data.y });
+    updatePlayer(player.element, player);
     data.username = player.element.dataset.value;
     socket.send(JSON.stringify(data));
   }
@@ -141,6 +142,9 @@ function createPlayer(username, data) {
 }
 
 function updatePlayer(element, data) {
+  if (data.alive === false) {
+    element.remove();
+  }
   if (data.x !== undefined) {
     element.style.left = `${data.x}px`;
   }
@@ -149,7 +153,6 @@ function updatePlayer(element, data) {
   }
   if (data.angle !== undefined) {
     const cube = element.getElementsByClassName('cube')[0];
-    console.log(cube)
     cube.style.transform = `rotate(${data.angle}rad)`;
   }
 }
