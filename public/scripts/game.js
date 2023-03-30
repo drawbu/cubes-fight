@@ -124,12 +124,18 @@ const interval = setInterval(() => {
 
 function createPlayer(username, data) {
   const newPlayer = document.createElement('div');
+  const cube = document.createElement('div');
+  const name = document.createElement('span');
   newPlayer.className = 'player';
   newPlayer.dataset.value = username;
   newPlayer.style.left = `${data.x}px`;
   newPlayer.style.top = `${data.y}px`;
-  newPlayer.style.transform = `rotate(${data.angle}rad)`;
+  cube.className = 'cube';
+  cube.style.transform = `rotate(${data.angle}rad)`;
+  name.innerText = username;
 
+  newPlayer.appendChild(cube)
+  newPlayer.appendChild(name)
   document.querySelector('body').appendChild(newPlayer);
   return newPlayer;
 }
@@ -142,6 +148,8 @@ function updatePlayer(element, data) {
     element.style.top = `${data.y}px`;
   }
   if (data.angle !== undefined) {
-    element.style.transform = `rotate(${data.angle}rad)`;
+    const cube = element.getElementsByClassName('cube')[0];
+    console.log(cube)
+    cube.style.transform = `rotate(${data.angle}rad)`;
   }
 }
