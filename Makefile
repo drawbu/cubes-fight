@@ -3,7 +3,7 @@ V_BIN = venv/bin
 ENV = .flaskenv
 
 GUNICORN_CMD = $(V_BIN)/gunicorn
-GUNICORN_ARGS =
+GUNICORN_ARGS = -k gevent
 
 
 all: run
