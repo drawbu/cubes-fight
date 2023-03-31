@@ -3,7 +3,7 @@ V_BIN = venv/bin
 ENV = .flaskenv
 
 SERVER_CMD = $(V_BIN)/uvicorn
-SERVER_ARGS =
+SERVER_ARGS = --port 8080
 
 
 all: run
