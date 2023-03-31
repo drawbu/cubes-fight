@@ -32,7 +32,7 @@ class Players:
     def __init__(self):
         self.__players: Dict[str, Player] = {}
 
-    def update(self, username: str, data) -> None:
+    async def update(self, username: str, data) -> None:
         """
         Update (or create) a player's data and broadcast the update
         :param username: The username of the player to update as a string
@@ -46,7 +46,7 @@ class Players:
             }
         else:
             self.__players[username].update(data)
-        self.ws_broadcast(self.get(username))
+        await self.ws_broadcast({"player": self.get(username)})
 
     def get(self, username: str) -> Player:
         """
@@ -68,13 +68,13 @@ class Players:
         for username in self.__players:
             yield self.get(username)
 
-    def remove(self, username) -> None:
+    async def remove(self, username) -> None:
         """
         Remove a player from the list and broadcast the removal
         :param username: The username of the player to remove as a string
         """
         del self.__players[username]
-        self.ws_broadcast({"username": username, "alive": False})
+        await self.ws_broadcast({"player": {"username": username, "alive": False}})
 
     async def ws_broadcast(self, message: Union[str, dict]):
         """
@@ -84,7 +84,6 @@ class Players:
         """
         if isinstance(message, dict):
             for player in self.__players.values():
-                print(player)
                 await player["ws"].send_json(message)
             return
         for player in self.__players.values():
@@ -112,19 +111,21 @@ async def websocket_endpoint(ws: WebSocket):
     username = ""
     connected = False
     for player in players.get_all():
-        await ws.send_json(player)
+        await ws.send_json({"player": player})
     try:
         while True:
             data = await ws.receive_json()
             if not data:
                 continue
-            if not data.get('username'):
-                continue
-            if not connected:
-                username = data["username"]
-                data["ws"] = ws
-                connected = True
-            players.update(username, data)
+            if data.get("player"):
+                player = data["player"]
+                if not player.get("username"):
+                    continue
+                if not connected:
+                    username = player["username"]
+                    player["ws"] = ws
+                    connected = True
+                await players.update(username, player)
     except WebSocketDisconnect:
         if username:
-            players.remove(username)
+            await players.remove(username)

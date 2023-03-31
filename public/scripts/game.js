@@ -13,13 +13,13 @@ const player = {
   alive: true,
   element: undefined,
   direction: { x: undefined, y: undefined },
+  lastAngle: 0,
 };
 player.element = createPlayer(username, player)
 player.element.id = 'player'
 player.direction.x = player.x;
 player.direction.y = player.y;
 
-let lastAngle = 0;
 const websocketProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
 const socket = new WebSocket(websocketProtocol + '//' + location.host + '/ws');
 
@@ -59,26 +59,37 @@ window.addEventListener('beforeunload', () => {
   socket.close();
 });
 
-socket.addEventListener('open', (event) => {
-  socket.send(JSON.stringify({ username, x: player.x, y: player.y, angle: player.angle }));
+socket.addEventListener('open', (_) => {
+  socket.send(JSON.stringify({
+    player: {
+      username,
+      x: player.x,
+      y: player.y,
+      angle: player.angle
+    }
+  }));
 });
 
-socket.addEventListener('close', (event) => {
+socket.addEventListener('close', (_) => {
   clearInterval(interval);
   console.log('WebSocket is closed now.');
 });
 
 socket.addEventListener('message', ev => {
-  const data = JSON.parse(ev.data);
-  if (data.username === username) {
-    return;
-  }
-  const element = document.querySelector(`[data-value="${data.username}"]`);
-  if (element) {
-    updatePlayer(element, data);
-  }
-  else {
-    createPlayer(data.username, data);
+  const raw_data = JSON.parse(ev.data);
+  console.log({ received: raw_data });
+  if (raw_data["player"] !== undefined) {
+    const data = raw_data["player"];
+    if (data.username === username) {
+      return;
+    }
+    const element = document.querySelector(`[data-value="${data.username}"]`);
+    if (element) {
+      updatePlayer(element, data);
+    }
+    else {
+      createPlayer(data.username, data);
+    }
   }
 });
 
@@ -113,17 +124,19 @@ const interval = setInterval(() => {
   if (move.y !== 0) {
     data.y = player.y;
   }
-  if (lastAngle !== player.angle) {
-    lastAngle = player.angle;
+  if (player.lastAngle !== player.angle) {
+    player.lastAngle = player.angle;
     data.angle = player.angle;
   }
-  if (Object.keys(data).length !== 0 && socket.OPEN) {
+  if (Object.keys(data).length !== 0) {
     updatePlayer(player.element, player);
     data.username = player.element.dataset.value;
-    socket.send(JSON.stringify(data));
+    socket.send(JSON.stringify({ player: data }));
   }
 }, 50);
 
+
+// Player related functions
 function createPlayer(username, data) {
   const newPlayer = document.createElement('div');
   const cube = document.createElement('div');
