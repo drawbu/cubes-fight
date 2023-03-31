@@ -20,7 +20,8 @@ player.direction.x = player.x;
 player.direction.y = player.y;
 
 let lastAngle = 0;
-const socket = new WebSocket('ws://' + location.host + '/echo');
+const websocketProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+const socket = new WebSocket(websocketProtocol + '//' + location.host + '/ws');
 
 // Get the player list
 const playerList = [];
