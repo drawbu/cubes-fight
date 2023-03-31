@@ -116,7 +116,7 @@ const interval = setInterval(() => {
     lastAngle = player.angle;
     data.angle = player.angle;
   }
-  if (Object.keys(data).length !== 0) {
+  if (Object.keys(data).length !== 0 && socket.OPEN) {
     updatePlayer(player.element, player);
     data.username = player.element.dataset.value;
     socket.send(JSON.stringify(data));
