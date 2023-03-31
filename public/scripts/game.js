@@ -151,7 +151,7 @@ function createPlayer(username, data) {
 
   newPlayer.appendChild(cube)
   newPlayer.appendChild(name)
-  document.querySelector('body').appendChild(newPlayer);
+  document.getElementById('game').appendChild(newPlayer);
   return newPlayer;
 }
 
