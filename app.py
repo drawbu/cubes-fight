@@ -33,6 +33,11 @@ class Players:
         self.__players: Dict[str, Player] = {}
 
     def update(self, username: str, data) -> None:
+        """
+        Update (or create) a player's data and broadcast the update
+        :param username: The username of the player to update as a string
+        :param data: The data to update the player with as a dict
+        """
         if self.__players.get(username) is None:
             self.__players[username] = {
                 **DEFAULT_VALUES,
@@ -44,6 +49,11 @@ class Players:
         self.ws_broadcast(self.get(username))
 
     def get(self, username: str) -> Player:
+        """
+        Get a player by username (the websocket is removed)
+        :param username: The username of the player to get as a string
+        :return: The player as a dict
+        """
         player = self.__players.get(username).copy()
         if player is None:
             return {"username": username, "alive": False}
@@ -51,14 +61,27 @@ class Players:
         return player
 
     def get_all(self) -> Iterable[Player]:
+        """
+        Get all players
+        :return: A generator of players as a generator of dicts
+        """
         for username in self.__players:
             yield self.get(username)
 
     def remove(self, username) -> None:
+        """
+        Remove a player from the list and broadcast the removal
+        :param username: The username of the player to remove as a string
+        """
         del self.__players[username]
         self.ws_broadcast({"username": username, "alive": False})
 
     async def ws_broadcast(self, message: Union[str, dict]):
+        """
+        Broadcast a message to all players
+        :param message: The message to broadcast as a string or dict. If a dict,
+            it will be converted to JSON.
+        """
         if isinstance(message, dict):
             for player in self.__players.values():
                 print(player)
