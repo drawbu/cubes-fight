@@ -1,36 +1,74 @@
 import os
-from typing import Dict, Union
+from typing import Dict, Union, TypedDict, Iterable
+from typing_extensions import Required
 
 from fastapi import FastAPI, WebSocket
 from starlette.responses import HTMLResponse, FileResponse
 from starlette.websockets import WebSocketDisconnect
 
+
 app = FastAPI()
-players: Dict[str, dict] = {}
-DEFAULT_VALUES = {"x": 300, "y": 300, "angle": 0, "alive": True}
 
 
-class ConnectionManager:
+class Player(TypedDict, total=False):
+    username: Required[str]
+    x: int
+    y: int
+    angle: int
+    alive: bool
+    ws: WebSocket
+
+
+DEFAULT_VALUES: Player = {
+    "x": 300,
+    "y": 300,
+    "angle": 0,
+    "alive": True,
+    "username": "",
+}
+
+
+class Players:
     def __init__(self):
-        self.active_connections: list[WebSocket] = []
+        self.__players: Dict[str, Player] = {}
 
-    async def connect(self, ws: WebSocket):
-        await ws.accept()
-        self.active_connections.append(ws)
+    def update(self, username: str, data) -> None:
+        if self.__players.get(username) is None:
+            self.__players[username] = {
+                **DEFAULT_VALUES,
+                **data,
+                "username": username,
+            }
+        else:
+            self.__players[username].update(data)
+        self.ws_broadcast(self.get(username))
 
-    def disconnect(self, ws: WebSocket):
-        self.active_connections.remove(ws)
+    def get(self, username: str) -> Player:
+        player = self.__players.get(username).copy()
+        if player is None:
+            return {"username": username, "alive": False}
+        del player["ws"]
+        return player
 
-    async def broadcast(self, message: Union[str, dict]):
+    def get_all(self) -> Iterable[Player]:
+        for username in self.__players:
+            yield self.get(username)
+
+    def remove(self, username) -> None:
+        del self.__players[username]
+        self.ws_broadcast({"username": username, "alive": False})
+
+    async def ws_broadcast(self, message: Union[str, dict]):
         if isinstance(message, dict):
-            for connection in self.active_connections:
-                await connection.send_json(message)
+            for player in self.__players.values():
+                print(player)
+                await player["ws"].send_json(message)
             return
-        for connection in self.active_connections:
-            await connection.send_text(message)
+        for player in self.__players.values():
+            await player["ws"].send_text(message)
 
 
-manager = ConnectionManager()
+players = Players()
 
 
 @app.get("/")
@@ -45,12 +83,12 @@ async def static_files(path: str):
     return HTMLResponse("nope")
 
 
-@app.websocket("/echo")
+@app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
-    await manager.connect(ws)
+    await ws.accept()
     username = ""
     connected = False
-    for player in players.values():
+    for player in players.get_all():
         await ws.send_json(player)
     try:
         while True:
@@ -61,15 +99,9 @@ async def websocket_endpoint(ws: WebSocket):
                 continue
             if not connected:
                 username = data["username"]
+                data["ws"] = ws
                 connected = True
-
-            if players.get(username) is None:
-                players[username] = {**DEFAULT_VALUES, **data}
-            else:
-                players[username].update(data)
-            await manager.broadcast(players[username])
+            players.update(username, data)
     except WebSocketDisconnect:
-        manager.disconnect(ws)
         if username:
-            del players[username]
-            await manager.broadcast({"username": username, "alive": False})
+            players.remove(username)
