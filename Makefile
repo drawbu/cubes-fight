@@ -4,7 +4,7 @@ ENV = .flaskenv
 
 SERVER_CMD = $(V_BIN)/uvicorn
 SERVER_ARGS = --port 8080
-
+PROD_BIND =
 
 all: run
 
@@ -25,7 +25,11 @@ run: $(SERVER_CMD)
 dev: SERVER_ARGS += --reload
 dev: run
 
-.PHONY: run dev
+prod: SERVER_CMD = $(V_BIN)/gunicorn
+prod: SERVER_ARGS = -k uvicorn.workers.UvicornWorker -b $(PROD_BIND) -w 4
+prod: run
+
+.PHONY: run dev prod
 
 clean:
 	@ $(RM) -r */__pycache__
