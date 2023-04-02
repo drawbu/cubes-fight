@@ -1,6 +1,6 @@
 import os
 import uuid
-from typing import Dict, Union, TypedDict, Iterable, Optional
+from typing import Dict, Union, TypedDict, Iterable, Optional, Tuple
 
 from pydantic import BaseModel
 from typing_extensions import Required
@@ -61,7 +61,7 @@ class Players:
             player["angle"] = data["angle"]
         if data.get("ws") is not None:
             player["ws"] = data["ws"]
-        await self.ws_broadcast({"player": self.get(user_id)})
+        await self.ws_broadcast({"player": self.get(user_id)}, (user_id,))
         return True
 
     def get(self, user_id: str) -> Optional[Player]:
@@ -93,21 +93,29 @@ class Players:
         del self.__players[user_id]
         await self.ws_broadcast({"player": {"user_id": user_id, "alive": False}})
 
-    async def ws_broadcast(self, message: Union[str, dict]):
+    async def ws_broadcast(
+        self,
+        message: Union[str, dict],
+        exclude: Optional[Tuple[str]] = None
+    ) -> None:
         """
         Broadcast a message to all players
         :param message: The message to broadcast as a string or dict. If a dict,
             it will be converted to JSON.
+        :param exclude: A tuple of user IDs to exclude from the broadcast
         """
         if isinstance(message, dict):
-            for player in self.__players.values():
+            for user_id, player in self.__players.items():
                 if (ws := player.get("ws")) is None:
-                    print(player)
+                    continue
+                if exclude is not None and user_id in exclude:
                     continue
                 await ws.send_json(message)
             return
-        for player in self.__players.values():
+        for user_id, player in self.__players.items():
             if (ws := player.get("ws")) is None:
+                continue
+            if exclude is not None and user_id in exclude:
                 continue
             await ws.send_text(message)
 
