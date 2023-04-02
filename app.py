@@ -126,6 +126,8 @@ async def websocket_endpoint(ws: WebSocket):
                     player["ws"] = ws
                     connected = True
                 await players.update(username, player)
+            if data.get("message"):
+                await players.ws_broadcast(data)
     except WebSocketDisconnect:
         if username:
             await players.remove(username)

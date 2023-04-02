@@ -23,6 +23,10 @@ player.direction.y = player.y;
 const websocketProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
 const socket = new WebSocket(websocketProtocol + '//' + location.host + '/ws');
 
+const chat = document.getElementById('chat');
+const chatMessages = document.getElementById('chat-messages');
+const chatInput = document.getElementById('chat-input');
+
 // Get the player list
 const playerList = [];
 document.querySelectorAll('.player').forEach((element) => {
@@ -91,6 +95,24 @@ socket.addEventListener('message', ev => {
       createPlayer(data.username, data);
     }
   }
+  if (raw_data["message"] !== undefined) {
+    const data = raw_data["message"];
+    const message = document.createElement('div');
+    message.className = 'message';
+    message.innerText = data.text;
+    chatMessages.appendChild(message);
+  }
+});
+
+// On submit on the chat form
+chat.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const text = username + ': ' + chatInput.value;
+  chatInput.value = '';
+  if (text.length === 0) {
+    return;
+  }
+  socket.send(JSON.stringify({ message: { text } }));
 });
 
 
