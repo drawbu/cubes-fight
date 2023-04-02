@@ -14,7 +14,6 @@ app = FastAPI()
 
 
 class Player(TypedDict, total=False):
-    user_id: Required[str]
     username: Required[str]
     x: int
     y: int
@@ -43,7 +42,6 @@ class Players:
         """
         self.__players[user_id] = {
             "username": username,
-            "user_id": user_id,
         }
 
     async def update(self, user_id: str, data: MovementData) -> bool:
@@ -77,7 +75,6 @@ class Players:
         player = self.__players[user_id].copy()
         if player.get("ws") is not None:
             del player["ws"]
-        del player["user_id"]
         return player
 
     def get_all(self) -> Iterable[Player]:
