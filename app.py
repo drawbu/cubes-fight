@@ -1,5 +1,8 @@
 import os
-from typing import Dict, Union, TypedDict, Iterable
+import uuid
+from typing import Dict, Union, TypedDict, Iterable, Optional
+
+from pydantic import BaseModel
 from typing_extensions import Required
 
 from fastapi import FastAPI, WebSocket
@@ -11,6 +14,7 @@ app = FastAPI()
 
 
 class Player(TypedDict, total=False):
+    user_id: Required[str]
     username: Required[str]
     x: int
     y: int
@@ -19,45 +23,61 @@ class Player(TypedDict, total=False):
     ws: WebSocket
 
 
-DEFAULT_VALUES: Player = {
-    "x": 300,
-    "y": 300,
-    "angle": 0,
-    "alive": True,
-    "username": "",
-}
+class MovementData(TypedDict, total=False):
+    user_id: Required[str]
+    x: int
+    y: int
+    angle: int
+    ws: WebSocket
 
 
 class Players:
     def __init__(self):
         self.__players: Dict[str, Player] = {}
 
-    async def update(self, username: str, data) -> None:
+    def create(self, user_id: str, username: str) -> None:
+        """
+        Create a player and add them to the list
+        :param user_id: The user ID of the player to create as a string
+        :param username: The username of the player to create as a string
+        """
+        self.__players[user_id] = {
+            "username": username,
+            "user_id": user_id,
+        }
+
+    async def update(self, user_id: str, data: MovementData) -> bool:
         """
         Update (or create) a player's data and broadcast the update
-        :param username: The username of the player to update as a string
+        :param user_id: The uuid of the player to update as a string
         :param data: The data to update the player with as a dict
         """
-        if self.__players.get(username) is None:
-            self.__players[username] = {
-                **DEFAULT_VALUES,
-                **data,
-                "username": username,
-            }
-        else:
-            self.__players[username].update(data)
-        await self.ws_broadcast({"player": self.get(username)})
+        if self.__players.get(user_id) is None:
+            return False
+        player = self.__players[user_id]
+        if data.get("x") is not None:
+            player["x"] = data["x"]
+        if data.get("y") is not None:
+            player["y"] = data["y"]
+        if data.get("angle") is not None:
+            player["angle"] = data["angle"]
+        if data.get("ws") is not None:
+            player["ws"] = data["ws"]
+        await self.ws_broadcast({"player": self.get(user_id)})
+        return True
 
-    def get(self, username: str) -> Player:
+    def get(self, user_id: str) -> Optional[Player]:
         """
         Get a player by username (the websocket is removed)
-        :param username: The username of the player to get as a string
+        :param user_id: The uuid of the player to get as a string
         :return: The player as a dict
         """
-        player = self.__players.get(username).copy()
-        if player is None:
-            return {"username": username, "alive": False}
-        del player["ws"]
+        if self.__players.get(user_id) is None:
+            return None
+        player = self.__players[user_id].copy()
+        if player.get("ws") is not None:
+            del player["ws"]
+        del player["user_id"]
         return player
 
     def get_all(self) -> Iterable[Player]:
@@ -65,16 +85,16 @@ class Players:
         Get all players
         :return: A generator of players as a generator of dicts
         """
-        for username in self.__players:
-            yield self.get(username)
+        for user_id in self.__players:
+            yield self.get(user_id)
 
-    async def remove(self, username) -> None:
+    async def remove(self, user_id: str) -> None:
         """
         Remove a player from the list and broadcast the removal
-        :param username: The username of the player to remove as a string
+        :param user_id: The uuid of the player to remove as a string
         """
-        del self.__players[username]
-        await self.ws_broadcast({"player": {"username": username, "alive": False}})
+        del self.__players[user_id]
+        await self.ws_broadcast({"player": {"user_id": user_id, "alive": False}})
 
     async def ws_broadcast(self, message: Union[str, dict]):
         """
@@ -84,18 +104,29 @@ class Players:
         """
         if isinstance(message, dict):
             for player in self.__players.values():
-                await player["ws"].send_json(message)
+                if (ws := player.get("ws")) is None:
+                    print(player)
+                    continue
+                await ws.send_json(message)
             return
         for player in self.__players.values():
-            await player["ws"].send_text(message)
+            if (ws := player.get("ws")) is None:
+                continue
+            await ws.send_text(message)
 
 
 players = Players()
 
 
+# Get requests
 @app.get("/")
 async def get():
-    return HTMLResponse(open("public/index.html").read())
+    return HTMLResponse(open("public/pages/index.html").read())
+
+
+@app.get("/game")
+async def game():
+    return HTMLResponse(open("public/pages/game.html").read())
 
 
 @app.get("/{path:path}")
@@ -105,11 +136,43 @@ async def static_files(path: str):
     return HTMLResponse("nope")
 
 
+# Post requests
+class Login(BaseModel):
+    username: str
+
+
+@app.post("/login")
+async def login(data: Login):
+    if not data:
+        return {"error": "no data provided"}
+    if not data.username:
+        return {"error": "no username provided"}
+    user_id = str(uuid.uuid4())
+    players.create(user_id, data.username)
+    return {"user_id": user_id}
+
+
+class Verify(BaseModel):
+    user_id: str
+
+
+@app.post("/verify")
+async def verify(data: Verify):
+    if not data:
+        return {"error": "no data provided"}
+    if not data.user_id:
+        return {"error": "no user_id provided"}
+    player = players.get(data.user_id)
+    if player is None:
+        return {"error": "invalid user_id"}
+    return {"username": player["username"]}
+
+
+# Websocket requests
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
     await ws.accept()
-    username = ""
-    connected = False
+    user_id: Optional[str] = None
     for player in players.get_all():
         await ws.send_json({"player": player})
     try:
@@ -117,17 +180,15 @@ async def websocket_endpoint(ws: WebSocket):
             data = await ws.receive_json()
             if not data:
                 continue
-            if data.get("player"):
-                player = data["player"]
-                if not player.get("username"):
+            if player := data.get("player"):
+                if not player.get("user_id"):
                     continue
-                if not connected:
-                    username = player["username"]
+                if user_id is None:
+                    user_id = player["user_id"]
                     player["ws"] = ws
-                    connected = True
-                await players.update(username, player)
+                await players.update(user_id, player)
             if data.get("message"):
                 await players.ws_broadcast(data)
     except WebSocketDisconnect:
-        if username:
-            await players.remove(username)
+        if user_id:
+            await players.remove(user_id)

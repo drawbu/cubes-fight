@@ -1,11 +1,8 @@
-// Get the username
-let username = null;
-while (!username) {
-  username = window.prompt('username: ')
-}
-
-
-// Let the game started
+// Get the user_id from the local storage
+const user_id = localStorage.getItem('user_id');
+let socket;
+let connected = false;
+let username;
 const player = {
   x: 300,
   y: 300,
@@ -15,25 +12,48 @@ const player = {
   direction: { x: undefined, y: undefined },
   lastAngle: 0,
 };
-player.element = createPlayer(username, player)
-player.element.id = 'player'
-player.direction.x = player.x;
-player.direction.y = player.y;
+let started = false;
 
-const websocketProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-const socket = new WebSocket(websocketProtocol + '//' + location.host + '/ws');
+// Verify the user_id
+fetch('/verify', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ user_id: user_id }),
+})
+  .then((res) => (res.status === 200) ? res.json() : null)
+  .then((data) => {
+    if (!data || !data['username']) {
+      window.location.href = '/';
+      return;
+    }
+    username = data['username'];
+  });
+
+
+// Wait for the username to be set
+const onUsernameSet = setInterval(() => {
+  if (!username) {
+    return;
+  }
+  player.element = createPlayer(username, player)
+  player.element.id = 'player'
+  player.direction.x = player.x;
+  player.direction.y = player.y;
+
+  const websocketProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  socket = new WebSocket(websocketProtocol + '//' + location.host + '/ws')
+  socket.onopen = onSocketOpen;
+  socket.onclose = onSocketClose;
+  socket.onmessage = onSocketMessage;
+
+  started = true;
+  clearInterval(onUsernameSet);
+});
+
 
 const chat = document.getElementById('chat');
 const chatMessages = document.getElementById('chat-messages');
 const chatInput = document.getElementById('chat-input');
-
-// Get the player list
-const playerList = [];
-document.querySelectorAll('.player').forEach((element) => {
-  if (element.id !== 'player') {
-    playerList.push(element);
-  }
-});
 
 function getCenterCoordinates(element) {
   const { left, top, width, height } = element.getBoundingClientRect();
@@ -43,12 +63,18 @@ function getCenterCoordinates(element) {
 
 // Events
 window.addEventListener('mousemove', (event) => {
+  if (!started) {
+    return;
+  }
   const center = getCenterCoordinates(player.element);
   player.angle = Math.atan2(event.clientY - center.y, event.clientX - center.x);
-  updatePlayer(player.element, { angle: player.angle })
+  updatePlayer(player.element, { angle: player.angle });
 });
 
 window.addEventListener('mouseup', (event) => {
+  if (!started) {
+    return;
+  }
   if (event.button === 0) {
     player.direction.x = event.clientX - 50;
     player.direction.y = event.clientY - 50;
@@ -56,30 +82,43 @@ window.addEventListener('mouseup', (event) => {
 });
 
 window.addEventListener('keydown', (event) => {
+  if (!started) {
+    return;
+  }
   console.log(`KeyboardEvent: key='${event.key}' | code='${event.code}'`);
 });
 
-window.addEventListener('beforeunload', () => {
-  socket.close();
+chat.addEventListener('submit', (event) => {
+  if (!started) {
+    return;
+  }
+  event.preventDefault();
+  const text = username + ': ' + chatInput.value;
+  chatInput.value = '';
+  if (text.length === 0) {
+    return;
+  }
+  socket.send(JSON.stringify({ message: { text } }));
 });
 
-socket.addEventListener('open', (_) => {
+onSocketOpen = () => {
+  connected = true;
   socket.send(JSON.stringify({
     player: {
-      username,
+      user_id: user_id,
       x: player.x,
       y: player.y,
       angle: player.angle
     }
   }));
-});
+};
 
-socket.addEventListener('close', (_) => {
-  clearInterval(interval);
-  console.log('WebSocket is closed now.');
-});
+onSocketClose = () => {
+  clearInterval(mainLoop);
+  console.log('Disconnected.');
+};
 
-socket.addEventListener('message', ev => {
+onSocketMessage = (ev) => {
   const raw_data = JSON.parse(ev.data);
   console.log({ received: raw_data });
   if (raw_data["player"] !== undefined) {
@@ -102,22 +141,14 @@ socket.addEventListener('message', ev => {
     message.innerText = data.text;
     chatMessages.appendChild(message);
   }
-});
-
-// On submit on the chat form
-chat.addEventListener('submit', (event) => {
-  event.preventDefault();
-  const text = username + ': ' + chatInput.value;
-  chatInput.value = '';
-  if (text.length === 0) {
-    return;
-  }
-  socket.send(JSON.stringify({ message: { text } }));
-});
+};
 
 
 // Main loop
-const interval = setInterval(() => {
+const mainLoop = setInterval(() => {
+  if (!started) {
+    return;
+  }
   const move = {
     speed: 20,
     x: Math.abs(player.x - player.direction.x),
@@ -150,9 +181,9 @@ const interval = setInterval(() => {
     player.lastAngle = player.angle;
     data.angle = player.angle;
   }
-  if (Object.keys(data).length !== 0) {
+  if (Object.keys(data).length !== 0 && connected) {
     updatePlayer(player.element, player);
-    data.username = player.element.dataset.value;
+    data.user_id = user_id;
     socket.send(JSON.stringify({ player: data }));
   }
 }, 50);
@@ -163,6 +194,7 @@ function createPlayer(username, data) {
   const newPlayer = document.createElement('div');
   const cube = document.createElement('div');
   const name = document.createElement('span');
+
   newPlayer.className = 'player';
   newPlayer.dataset.value = username;
   newPlayer.style.left = `${data.x}px`;
