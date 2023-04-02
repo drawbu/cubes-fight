@@ -26,7 +26,7 @@ dev: SERVER_ARGS += --reload
 dev: run
 
 prod: SERVER_CMD = $(V_BIN)/gunicorn
-prod: SERVER_ARGS = -k uvicorn.workers.UvicornWorker -b $(PROD_BIND) -w 4
+prod: SERVER_ARGS = -k uvicorn.workers.UvicornWorker -b $(PROD_BIND)
 prod: run
 
 .PHONY: run dev prod
