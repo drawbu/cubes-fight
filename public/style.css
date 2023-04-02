@@ -17,10 +17,11 @@ html  {
   position: absolute;
   left: 300px;
   top: 300px;
+  z-index: -1;
 }
 
 #game > .player#player {
-  z-index: 1;
+  z-index: 0;
 }
 
 #game > .player > .cube {
@@ -33,7 +34,7 @@ html  {
   background-color: lightskyblue;
 }
 
-.player > span {
+#game > .player > span {
   width: 100%;
   text-align: center;
   display: block;
