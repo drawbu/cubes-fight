@@ -11,6 +11,45 @@ html  {
   font-family: "SF Pro", arial, serif;
 }
 
+
+/* Login page */
+#login {
+  width: 800px;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+#login > h2,
+#username-input {
+  text-align: center;
+  font-size: 48px;
+  font-weight: bolder;
+}
+
+#username-form {
+  display: flex;
+  gap: 16px;
+  flex-direction: row;
+  align-items: center;
+  margin: auto;
+}
+
+#username-input {
+  border: none;
+  background-color: transparent;
+  outline: none;
+  color: lightskyblue;
+}
+
+#error-message {
+  margin-top: 32px;
+  color: indianred;
+  text-align: center;
+}
+
+
+/* Game page */
 #game > .player {
   height: 100px;
   width: 100px;
