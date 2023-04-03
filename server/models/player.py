@@ -11,12 +11,16 @@ class Player(TypedDict, total=False):
     angle: int
     alive: bool
     ws: WebSocket
+    directionX: int
+    directionY: int
 
 
 class MovementData(TypedDict, total=False):
     user_id: Required[str]
     x: int
     y: int
+    directionX: int
+    directionY: int
     angle: int
     ws: WebSocket
 
@@ -44,15 +48,24 @@ class Players:
         if self.__players.get(user_id) is None:
             return False
         player = self.__players[user_id]
+        broadcast_data: dict = data.copy()
         if data.get("x") is not None:
             player["x"] = data["x"]
         if data.get("y") is not None:
             player["y"] = data["y"]
+        if data.get("directionX") is not None:
+            player["directionX"] = data["directionX"]
+        if data.get("directionY") is not None:
+            player["directionY"] = data["directionY"]
         if data.get("angle") is not None:
             player["angle"] = data["angle"]
         if data.get("ws") is not None:
             player["ws"] = data["ws"]
-        await self.ws_broadcast({"player": self.get(user_id)}, (user_id,))
+            del broadcast_data["ws"]
+
+        del broadcast_data["user_id"]
+        broadcast_data["username"] = player["username"]
+        await self.ws_broadcast({"player": broadcast_data}, (user_id,))
         return True
 
     def get(self, user_id: str) -> Optional[Player]:

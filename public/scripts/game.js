@@ -33,7 +33,6 @@ const onUsernameSet = setInterval(() => {
   }
   const player = createPlayer(username, {x: 300, y: 300, angle: 0});
   player.element.id = 'player'
-  player.lastAngle = 0;
 
   const websocketProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
   socket = new WebSocket(websocketProtocol + '//' + location.host + '/ws')
@@ -61,6 +60,14 @@ onMouseMove = (event) => {
   const center = getCenterCoordinates(player.element);
   player.angle = Math.atan2(event.clientY - center.y, event.clientX - center.x);
   updatePlayer(player, { angle: player.angle });
+  if (connected) {
+    socket.send(JSON.stringify({
+      player: {
+        user_id: user_id,
+        angle: player.angle
+      }
+    }));
+  }
 };
 
 onMouseClick = (event) => {
@@ -68,13 +75,21 @@ onMouseClick = (event) => {
     const player = players[username];
     player.direction.x = event.clientX - 50;
     player.direction.y = event.clientY - 50;
+    socket.send(JSON.stringify({
+      player: {
+        user_id: user_id,
+        x: player.x,
+        y: player.y,
+        directionX: player.direction.x,
+        directionY: player.direction.y
+      }
+    }));
   }
 };
 
 onKeyDown = (event) => {
   console.log(`KeyboardEvent: key='${event.key}' | code='${event.code}'`);
 };
-
 
 onChatSubmit = (event) => {
   event.preventDefault();
@@ -88,6 +103,7 @@ onChatSubmit = (event) => {
 
 onSocketOpen = () => {
   connected = true;
+  const player = players[username];
   socket.send(JSON.stringify({
     player: {
       user_id: user_id,
@@ -99,6 +115,7 @@ onSocketOpen = () => {
 };
 
 onSocketClose = () => {
+  connected = false;
   clearInterval(mainLoop);
   console.log('Disconnected.');
 };
@@ -141,46 +158,30 @@ onSocketMessage = (ev) => {
 
 // Main loop
 const mainLoop = setInterval(() => {
-  const player = players[username];
-  if (!player) {
-    return;
-  }
-  const move = {
-    speed: 20,
-    x: Math.abs(player.x - player.direction.x),
-    y: Math.abs(player.y - player.direction.y),
-  };
-  move.movementX = Math.round(move.x / (move.x + move.y) * move.speed);
-  move.movementY = move.speed - move.movementX;
+  for (const username in players) {
+    const player = players[username];
+    const move = {
+      speed: 20,
+      x: Math.abs(player.x - player.direction.x),
+      y: Math.abs(player.y - player.direction.y),
+    };
+    move.movementX = Math.round(move.x / (move.x + move.y) * move.speed);
+    move.movementY = move.speed - move.movementX;
 
-  if (player.x < player.direction.x) {
-    player.x += Math.min(move.movementX, player.direction.x - player.x);
-  } else if (player.x > player.direction.x) {
-    player.x -= Math.min(move.movementX, player.x - player.direction.x);
-  }
+    if (player.x < player.direction.x) {
+      player.x += Math.min(move.movementX, player.direction.x - player.x);
+    } else if (player.x > player.direction.x) {
+      player.x -= Math.min(move.movementX, player.x - player.direction.x);
+    }
 
-  if (player.y < player.direction.y) {
-    player.y += Math.min(move.movementY, player.direction.y - player.y);
-  } else if (player.y > player.direction.y) {
-    player.y -= Math.min(move.movementY, player.y - player.direction.y);
-  }
+    if (player.y < player.direction.y) {
+      player.y += Math.min(move.movementY, player.direction.y - player.y);
+    } else if (player.y > player.direction.y) {
+      player.y -= Math.min(move.movementY, player.y - player.direction.y);
+    }
 
-  // Update the position
-  const data = {}
-  if (move.x !== 0) {
-    data.x = player.x;
-  }
-  if (move.y !== 0) {
-    data.y = player.y;
-  }
-  if (player.lastAngle !== player.angle) {
-    player.lastAngle = player.angle;
-    data.angle = player.angle;
-  }
-  if (Object.keys(data).length !== 0 && connected) {
-    updatePlayer(player, player);
-    data.user_id = user_id;
-    socket.send(JSON.stringify({ player: data }));
+    // Update the position of the player
+    updatePlayer(player, {x: player.x, y: player.y});
   }
 }, 50);
 
@@ -241,5 +242,11 @@ function updatePlayer(player, data) {
   if (data.angle !== undefined) {
     const cube = player.element.getElementsByClassName('cube')[0];
     cube.style.transform = `rotate(${data.angle}rad)`;
+  }
+  if (data.directionX !== undefined) {
+    player.direction.x = data.directionX;
+  }
+  if (data.directionY !== undefined) {
+    player.direction.y = data.directionY;
   }
 }
