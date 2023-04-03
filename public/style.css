@@ -128,3 +128,9 @@ html  {
   outline: none;
   border-bottom: black solid 2px;
 }
+
+#game-info {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+}

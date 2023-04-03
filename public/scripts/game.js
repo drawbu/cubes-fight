@@ -5,6 +5,7 @@ let connected = false;
 let username;
 const chat = document.getElementById('chat');
 const chatMessages = document.getElementById('chat-messages');
+const playerCount = document.getElementById('player-count');
 const chatInput = document.getElementById('chat-input');
 let started = false;
 const players = {};
@@ -163,6 +164,7 @@ onSocketMessage = (ev) => {
 
 // Loops
 const movementLoop = setInterval(() => {
+  playerCount.innerText = Object.keys(players).length.toString();
   for (const username in players) {
     const player = players[username];
     const move = {
