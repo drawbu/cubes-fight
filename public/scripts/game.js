@@ -258,7 +258,7 @@ function createPlayer(username, data) {
 
   newPlayer.element.appendChild(cube);
   newPlayer.element.appendChild(name);
-  document.getElementById('game').appendChild(newPlayer.element);
+  document.getElementById('players').appendChild(newPlayer.element);
   players[username] = newPlayer;
   return newPlayer;
 }
