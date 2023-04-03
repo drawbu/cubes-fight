@@ -16,7 +16,7 @@ players = Players()
 # Get requests
 @app.get("/")
 async def get():
-    return HTMLResponse(open("./public/pages/index.html").read())
+    return HTMLResponse(open("./public/pages/login.html").read())
 
 
 @app.get("/game")
