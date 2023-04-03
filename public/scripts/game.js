@@ -109,7 +109,7 @@ onSocketOpen = () => {
 
 onSocketClose = () => {
   connected = false;
-  clearInterval(mainLoop);
+  clearInterval(movementLoop);
   clearInterval(backupLoop);
   clearInterval(rotationLoop);
   console.log('Disconnected.');
@@ -150,9 +150,8 @@ onSocketMessage = (ev) => {
   }
 };
 
-
-// Main loop
-const mainLoop = setInterval(() => {
+// Loops
+const movementLoop = setInterval(() => {
   for (const username in players) {
     const player = players[username];
     const move = {
