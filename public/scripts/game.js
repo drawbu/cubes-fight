@@ -45,6 +45,10 @@ const onUsernameSet = setInterval(() => {
   socket.onopen = onSocketOpen;
   socket.onclose = onSocketClose;
   socket.onmessage = onSocketMessage;
+  window.onmousemove = onMouseMove;
+  window.onmouseup = onMouseClick;
+  window.onkeydown = onKeyDown;
+  chat.onsubmit = onChatSubmit;
 
   started = true;
   clearInterval(onUsernameSet);
@@ -62,36 +66,25 @@ function getCenterCoordinates(element) {
 
 
 // Events
-window.addEventListener('mousemove', (event) => {
-  if (!started) {
-    return;
-  }
+onMouseMove = (event) => {
   const center = getCenterCoordinates(player.element);
   player.angle = Math.atan2(event.clientY - center.y, event.clientX - center.x);
   updatePlayer(player.element, { angle: player.angle });
-});
+};
 
-window.addEventListener('mouseup', (event) => {
-  if (!started) {
-    return;
-  }
+onMouseClick = (event) => {
   if (event.button === 0) {
     player.direction.x = event.clientX - 50;
     player.direction.y = event.clientY - 50;
   }
-});
+};
 
-window.addEventListener('keydown', (event) => {
-  if (!started) {
-    return;
-  }
+onKeyDown = (event) => {
   console.log(`KeyboardEvent: key='${event.key}' | code='${event.code}'`);
-});
+};
 
-chat.addEventListener('submit', (event) => {
-  if (!started) {
-    return;
-  }
+
+onChatSubmit = (event) => {
   event.preventDefault();
   const text = chatInput.value;
   chatInput.value = '';
@@ -99,7 +92,7 @@ chat.addEventListener('submit', (event) => {
     return;
   }
   socket.send(JSON.stringify({ message: { text, username } }));
-});
+};
 
 onSocketOpen = () => {
   connected = true;
