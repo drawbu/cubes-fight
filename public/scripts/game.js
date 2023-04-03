@@ -117,6 +117,7 @@ onSocketOpen = () => {
 onSocketClose = () => {
   connected = false;
   clearInterval(mainLoop);
+  clearInterval(backupLoop);
   console.log('Disconnected.');
 };
 
@@ -184,6 +185,23 @@ const mainLoop = setInterval(() => {
     updatePlayer(player, {x: player.x, y: player.y});
   }
 }, 50);
+
+
+const backupLoop = setInterval(() => {
+  if (!connected) {
+    return;
+  }
+  const player = players[username];
+  socket.send(JSON.stringify({
+    player: {
+      user_id: user_id,
+      x: player.x,
+      y: player.y,
+      directionX: player.direction.x,
+      directionY: player.direction.y
+    }
+  }));
+}, 5000);
 
 
 // Player related functions
