@@ -8,6 +8,7 @@ const chatMessages = document.getElementById('chat-messages');
 const chatInput = document.getElementById('chat-input');
 let started = false;
 const players = {};
+let hoveringChat = false;
 
 
 // Verify the user_id
@@ -44,6 +45,8 @@ const onUsernameSet = setInterval(() => {
   window.onmouseup = onMouseClick;
   window.onkeydown = onKeyDown;
   chat.onsubmit = onChatSubmit;
+  chat.onmouseover = onMouseOverChat;
+  chat.onmouseout = onMouseOutChat;
 
   started = true;
   clearInterval(onUsernameSet);
@@ -64,7 +67,7 @@ onMouseMove = (event) => {
 };
 
 onMouseClick = (event) => {
-  if (event.button === 0) {
+  if (event.button === 0 && !hoveringChat) {
     const player = players[username];
     player.direction.x = event.clientX - 50;
     player.direction.y = event.clientY - 50;
@@ -79,6 +82,14 @@ onMouseClick = (event) => {
     }));
   }
 };
+
+onMouseOverChat = () => {
+  hoveringChat = true;
+}
+
+onMouseOutChat = () => {
+  hoveringChat = false;
+}
 
 onKeyDown = (event) => {
   console.log(`KeyboardEvent: key='${event.key}' | code='${event.code}'`);
