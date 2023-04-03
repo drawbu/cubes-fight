@@ -159,6 +159,7 @@ onSocketMessage = (ev) => {
     message.appendChild(msg_username);
     message.appendChild(msg_text);
     chatMessages.appendChild(message);
+    chatMessages.scrollTop = message.offsetHeight + message.offsetTop;
   }
 };
 
