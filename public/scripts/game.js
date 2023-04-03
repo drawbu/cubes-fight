@@ -3,16 +3,12 @@ const user_id = localStorage.getItem('user_id');
 let socket;
 let connected = false;
 let username;
-const player = {
-  x: 300,
-  y: 300,
-  angle: 0,
-  alive: true,
-  element: undefined,
-  direction: { x: undefined, y: undefined },
-  lastAngle: 0,
-};
+const chat = document.getElementById('chat');
+const chatMessages = document.getElementById('chat-messages');
+const chatInput = document.getElementById('chat-input');
 let started = false;
+const players = {};
+
 
 // Verify the user_id
 fetch('/verify', {
@@ -35,10 +31,9 @@ const onUsernameSet = setInterval(() => {
   if (!username) {
     return;
   }
-  player.element = createPlayer(username, player)
+  const player = createPlayer(username, {x: 300, y: 300, angle: 0});
   player.element.id = 'player'
-  player.direction.x = player.x;
-  player.direction.y = player.y;
+  player.lastAngle = 0;
 
   const websocketProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
   socket = new WebSocket(websocketProtocol + '//' + location.host + '/ws')
@@ -54,11 +49,6 @@ const onUsernameSet = setInterval(() => {
   clearInterval(onUsernameSet);
 });
 
-
-const chat = document.getElementById('chat');
-const chatMessages = document.getElementById('chat-messages');
-const chatInput = document.getElementById('chat-input');
-
 function getCenterCoordinates(element) {
   const { left, top, width, height } = element.getBoundingClientRect();
   return { x: left + width / 2, y: top + height / 2 };
@@ -67,13 +57,15 @@ function getCenterCoordinates(element) {
 
 // Events
 onMouseMove = (event) => {
+  const player = players[username];
   const center = getCenterCoordinates(player.element);
   player.angle = Math.atan2(event.clientY - center.y, event.clientX - center.x);
-  updatePlayer(player.element, { angle: player.angle });
+  updatePlayer(player, { angle: player.angle });
 };
 
 onMouseClick = (event) => {
   if (event.button === 0) {
+    const player = players[username];
     player.direction.x = event.clientX - 50;
     player.direction.y = event.clientY - 50;
   }
@@ -119,11 +111,10 @@ onSocketMessage = (ev) => {
     if (data.username === username) {
       return;
     }
-    const element = document.querySelector(`[data-value="${data.username}"]`);
-    if (element) {
-      updatePlayer(element, data);
-    }
-    else {
+    const player = players[data.username];
+    if (player) {
+      updatePlayer(player, data);
+    } else {
       createPlayer(data.username, data);
     }
   }
@@ -150,7 +141,8 @@ onSocketMessage = (ev) => {
 
 // Main loop
 const mainLoop = setInterval(() => {
-  if (!started) {
+  const player = players[username];
+  if (!player) {
     return;
   }
   const move = {
@@ -186,7 +178,7 @@ const mainLoop = setInterval(() => {
     data.angle = player.angle;
   }
   if (Object.keys(data).length !== 0 && connected) {
-    updatePlayer(player.element, player);
+    updatePlayer(player, player);
     data.user_id = user_id;
     socket.send(JSON.stringify({ player: data }));
   }
@@ -195,36 +187,59 @@ const mainLoop = setInterval(() => {
 
 // Player related functions
 function createPlayer(username, data) {
-  const newPlayer = document.createElement('div');
+  if (username === undefined) {
+    return undefined;
+  }
+  if (players[username] !== undefined) {
+    return players[username];
+  }
+
+  const newPlayer = {
+    username: username,
+    x: data.x,
+    y: data.y,
+    angle: data.angle,
+    direction: { x: data.x, y: data.y },
+    element: document.createElement('div'),
+  }
+
   const cube = document.createElement('div');
   const name = document.createElement('span');
 
-  newPlayer.className = 'player';
-  newPlayer.dataset.value = username;
-  newPlayer.style.left = `${data.x}px`;
-  newPlayer.style.top = `${data.y}px`;
+  newPlayer.element.className = 'player';
+  newPlayer.element.dataset.value = username;
+  newPlayer.element.style.left = `${data.x}px`;
+  newPlayer.element.style.top = `${data.y}px`;
   cube.className = 'cube';
   cube.style.transform = `rotate(${data.angle}rad)`;
   name.innerText = username;
 
-  newPlayer.appendChild(cube)
-  newPlayer.appendChild(name)
-  document.getElementById('game').appendChild(newPlayer);
+  newPlayer.element.appendChild(cube);
+  newPlayer.element.appendChild(name);
+  document.getElementById('game').appendChild(newPlayer.element);
+  players[username] = newPlayer;
   return newPlayer;
 }
 
-function updatePlayer(element, data) {
+function updatePlayer(player, data) {
+  if (!data) {
+    return;
+  }
+  if (!player) {
+    return;
+  }
   if (data.alive === false) {
-    element.remove();
+    player.element.remove();
+    delete players[data.username];
   }
   if (data.x !== undefined) {
-    element.style.left = `${data.x}px`;
+    player.element.style.left = `${data.x}px`;
   }
   if (data.y !== undefined) {
-    element.style.top = `${data.y}px`;
+    player.element.style.top = `${data.y}px`;
   }
   if (data.angle !== undefined) {
-    const cube = element.getElementsByClassName('cube')[0];
+    const cube = player.element.getElementsByClassName('cube')[0];
     cube.style.transform = `rotate(${data.angle}rad)`;
   }
 }
