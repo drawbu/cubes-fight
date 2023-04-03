@@ -53,7 +53,17 @@ html  {
 
 
 /* Game page */
-#game > .player {
+#background-grid {
+  width: 100vw;
+  height: 100vh;
+  background-image:
+    linear-gradient(to right, rgba(0, 0, 0, .2) 2px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, .2) 2px, transparent 1px);
+  background-size: 64px 64px;
+  overflow: hidden;
+}
+
+#players > .player {
   height: 100px;
   width: 100px;
   position: absolute;
@@ -62,21 +72,21 @@ html  {
   z-index: -1;
 }
 
-#game > .player#player {
+#players > .player#player {
   z-index: 0;
 }
 
-#game > .player > .cube {
+#players > .player > .cube {
   width: 100%;
   height: 100%;
   background-color: var(--secondary-color);
 }
 
-#game > .player#player > .cube {
+#players > .player#player > .cube {
   background-color: var(--main-color);
 }
 
-#game > .player > span {
+#players > .player > span {
   width: 100%;
   text-align: center;
   display: block;
