@@ -54,7 +54,7 @@ html  {
 
 /* Game page */
 #background-grid {
-  width: 100lh;
+  width: 100vw;
   height: 100vh;
   background-image:
     linear-gradient(to right, rgba(0, 0, 0, .2) 2px, transparent 1px),
