@@ -33,6 +33,7 @@ const onUsernameSet = setInterval(() => {
   }
   const player = createPlayer(username, {x: 300, y: 300, angle: 0});
   player.element.id = 'player'
+  player.lastAngle = 0;
 
   const websocketProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
   socket = new WebSocket(websocketProtocol + '//' + location.host + '/ws')
@@ -60,14 +61,6 @@ onMouseMove = (event) => {
   const center = getCenterCoordinates(player.element);
   player.angle = Math.atan2(event.clientY - center.y, event.clientX - center.x);
   updatePlayer(player, { angle: player.angle });
-  if (connected) {
-    socket.send(JSON.stringify({
-      player: {
-        user_id: user_id,
-        angle: player.angle
-      }
-    }));
-  }
 };
 
 onMouseClick = (event) => {
@@ -118,6 +111,7 @@ onSocketClose = () => {
   connected = false;
   clearInterval(mainLoop);
   clearInterval(backupLoop);
+  clearInterval(rotationLoop);
   console.log('Disconnected.');
 };
 
@@ -186,6 +180,22 @@ const mainLoop = setInterval(() => {
   }
 }, 50);
 
+const rotationLoop = setInterval(() => {
+  if (!connected) {
+    return;
+  }
+  const player = players[username];
+  if (player.lastAngle === player.angle) {
+    return;
+  }
+  player.lastAngle = player.angle;
+  socket.send(JSON.stringify({
+    player: {
+      user_id: user_id,
+      angle: player.angle
+    }
+  }));
+}, 100);
 
 const backupLoop = setInterval(() => {
   if (!connected) {
