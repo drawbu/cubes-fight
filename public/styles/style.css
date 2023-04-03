@@ -1,0 +1,15 @@
+* {
+  margin: 0;
+  padding: 0;
+}
+
+html  {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "SF Pro", arial, serif;
+
+  --main-color: lightskyblue;
+  --secondary-color: indianred;
+}

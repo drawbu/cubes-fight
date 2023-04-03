@@ -1,0 +1,36 @@
+@import url("style.css");
+
+#login {
+  width: 800px;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+#login > h2,
+#username-input {
+  text-align: center;
+  font-size: 48px;
+  font-weight: bolder;
+}
+
+#username-form {
+  display: flex;
+  gap: 16px;
+  flex-direction: row;
+  align-items: center;
+  margin: auto;
+}
+
+#username-input {
+  border: none;
+  background-color: transparent;
+  outline: none;
+  color: var(--main-color);
+}
+
+#error-message {
+  margin-top: 32px;
+  color: var(--secondary-color);
+  text-align: center;
+}
