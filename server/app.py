@@ -38,6 +38,8 @@ async def login(data: LoginData):
         return {"error": "no data provided"}
     if not data.username:
         return {"error": "no username provided"}
+    if players.get_by_username(data.username):
+        return {"error": "username already taken"}
     user_id = str(uuid.uuid4())
     players.create(user_id, data.username)
     return {"user_id": user_id}
