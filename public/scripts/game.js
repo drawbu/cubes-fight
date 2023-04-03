@@ -93,12 +93,12 @@ chat.addEventListener('submit', (event) => {
     return;
   }
   event.preventDefault();
-  const text = username + ': ' + chatInput.value;
+  const text = chatInput.value;
   chatInput.value = '';
   if (text.length === 0) {
     return;
   }
-  socket.send(JSON.stringify({ message: { text } }));
+  socket.send(JSON.stringify({ message: { text, username } }));
 });
 
 onSocketOpen = () => {
@@ -137,8 +137,19 @@ onSocketMessage = (ev) => {
   if (raw_data["message"] !== undefined) {
     const data = raw_data["message"];
     const message = document.createElement('div');
-    message.className = 'message';
-    message.innerText = data.text;
+    const msg_username = document.createElement('span');
+    const msg_text = document.createElement('span');
+    msg_username.innerText = data.username;
+    msg_username.className = 'username';
+    msg_text.innerText = ': ' + data.text;
+    msg_text.className = 'text';
+    message.classList.add('message');
+    if (data.username === username) {
+      message.classList.add('self');
+    }
+
+    message.appendChild(msg_username);
+    message.appendChild(msg_text);
     chatMessages.appendChild(message);
   }
 };
