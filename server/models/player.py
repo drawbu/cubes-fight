@@ -68,6 +68,17 @@ class Players:
             del player["ws"]
         return player
 
+    def get_by_username(self, username: str) -> Optional[Player]:
+        """
+        Get a player by username (the websocket is removed)
+        :param username: The username of the player to get as a string
+        :return: The player as a dict
+        """
+        for user_id, player in self.__players.items():
+            if player["username"] == username:
+                return self.get(user_id)
+        return None
+
     def get_all(self) -> Iterable[Player]:
         """
         Get all players
