@@ -81,8 +81,9 @@ class Players:
         Remove a player from the list and broadcast the removal
         :param user_id: The uuid of the player to remove as a string
         """
+        username = self.__players[user_id]["username"]
         del self.__players[user_id]
-        await self.ws_broadcast({"player": {"user_id": user_id, "alive": False}})
+        await self.ws_broadcast({"player": {"username": username, "alive": False}})
 
     async def ws_broadcast(
         self,
