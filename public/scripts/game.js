@@ -32,10 +32,7 @@ fetch('/verify', {
       return;
     }
     username = data['username'];
-    const player = new Player(username, {x: 300, y: 300, angle: 0});
-    player.element.id = 'player'
-    player.lastAngle = 0;
-    players[username] = player;
+    players[username] = new Player(username, {x: 300, y: 300, angle: 0}, true);
 
     const websocketProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
     socket = new WebSocket(websocketProtocol + '//' + location.host + '/ws')
@@ -249,7 +246,7 @@ class Player {
   element;
   cube;
 
-  constructor(username, data) {
+  constructor(username, data, isSelf) {
     this.username = username;
     this.x = data.x;
     this.y = data.y;
@@ -265,6 +262,11 @@ class Player {
     this.cube.style.transform = `rotate(${data.angle}rad)`;
     const name = document.createElement('span');
     name.innerText = username;
+
+    if (isSelf) {
+      this.lastAngle = 0;
+      this.element.id = 'player';
+    }
 
     this.element.appendChild(this.cube);
     this.element.appendChild(name);
