@@ -40,9 +40,10 @@ const onUsernameSet = setInterval(() => {
   if (!username) {
     return;
   }
-  const player = createPlayer(username, {x: 300, y: 300, angle: 0});
+  const player = new Player(username, {x: 300, y: 300, angle: 0});
   player.element.id = 'player'
   player.lastAngle = 0;
+  players[username] = player;
 
   const websocketProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
   socket = new WebSocket(websocketProtocol + '//' + location.host + '/ws')
@@ -60,18 +61,13 @@ const onUsernameSet = setInterval(() => {
   clearInterval(onUsernameSet);
 });
 
-function getCenterCoordinates(element) {
-  const { left, top, width, height } = element.getBoundingClientRect();
-  return { x: left + width / 2, y: top + height / 2 };
-}
-
 
 // Events
 onMouseMove = (event) => {
   const player = players[username];
-  const center = getCenterCoordinates(player.element);
-  player.angle = Math.atan2(event.clientY - center.y, event.clientX - center.x);
-  updatePlayer(player, { angle: player.angle });
+  const center = player.getCenterCoordinates();
+  const angle = Math.atan2(event.clientY - center.y, event.clientX - center.x);
+  player.update({ angle });
 };
 
 onMouseClick = (event) => {
@@ -156,9 +152,9 @@ onSocketMessage = (ev) => {
     }
     const player = players[data.username];
     if (player) {
-      updatePlayer(player, data);
+      player.update(data);
     } else {
-      createPlayer(data.username, data);
+      players[data.username] = new Player(data.username, data);
     }
   }
   if (raw_data["message"] !== undefined) {
@@ -200,20 +196,21 @@ const movementLoop = setInterval(() => {
     move.movementX = Math.round(move.x / (move.x + move.y) * move.speed);
     move.movementY = move.speed - move.movementX;
 
+    let x = player.x;
+    let y = player.y;
     if (player.x < player.direction.x) {
-      player.x += Math.min(move.movementX, player.direction.x - player.x);
+      x += Math.min(move.movementX, player.direction.x - player.x);
     } else if (player.x > player.direction.x) {
-      player.x -= Math.min(move.movementX, player.x - player.direction.x);
+      x -= Math.min(move.movementX, player.x - player.direction.x);
     }
 
     if (player.y < player.direction.y) {
-      player.y += Math.min(move.movementY, player.direction.y - player.y);
+      y += Math.min(move.movementY, player.direction.y - player.y);
     } else if (player.y > player.direction.y) {
-      player.y -= Math.min(move.movementY, player.y - player.direction.y);
+      y -= Math.min(move.movementY, player.y - player.direction.y);
     }
 
-    // Update the position of the player
-    updatePlayer(player, {x: player.x, y: player.y});
+    player.update({ x, y })
   }
 }, 50);
 
@@ -251,69 +248,66 @@ const backupLoop = setInterval(() => {
 }, 5000);
 
 
-// Player related functions
-function createPlayer(username, data) {
-  if (username === undefined) {
-    return undefined;
-  }
-  if (players[username] !== undefined) {
-    return players[username];
+class Player {
+  username;
+  x;
+  y;
+  angle;
+  direction;
+  element;
+  cube;
+
+  constructor(username, data) {
+    this.username = username;
+    this.x = data.x;
+    this.y = data.y;
+    this.angle = data.angle;
+    this.direction = { x: data.x, y: data.y };
+    this.element = document.createElement('div');
+    this.element.className = 'player';
+    this.element.dataset.value = username;
+    this.element.style.left = `${data.x}px`;
+    this.element.style.top = `${data.y}px`;
+    this.cube = document.createElement('div');
+    this.cube.className = 'cube';
+    this.cube.style.transform = `rotate(${data.angle}rad)`;
+    const name = document.createElement('span');
+    name.innerText = username;
+
+    this.element.appendChild(this.cube);
+    this.element.appendChild(name);
+    document.getElementById('players').appendChild(this.element);
   }
 
-  const newPlayer = {
-    username: username,
-    x: data.x,
-    y: data.y,
-    angle: data.angle,
-    direction: { x: data.x, y: data.y },
-    element: document.createElement('div'),
+  update(data) {
+    if (data.alive === false) {
+      this.element.remove();
+      delete players[data.username];
+      return;
+    }
+
+    if (data.x !== undefined) {
+      this.x = data.x;
+      this.element.style.left = `${this.x - camera.x}px`;
+    }
+    if (data.y !== undefined) {
+      this.y = data.y;
+      this.element.style.top = `${this.y - camera.y}px`;
+    }
+    if (data.angle !== undefined) {
+      this.angle = data.angle;
+      this.cube.style.transform = `rotate(${this.angle}rad)`;
+    }
+    if (data.directionX !== undefined) {
+      this.direction.x = data.directionX;
+    }
+    if (data.directionY !== undefined) {
+      this.direction.y = data.directionY;
+    }
   }
 
-  const cube = document.createElement('div');
-  const name = document.createElement('span');
-
-  newPlayer.element.className = 'player';
-  newPlayer.element.dataset.value = username;
-  newPlayer.element.style.left = `${data.x}px`;
-  newPlayer.element.style.top = `${data.y}px`;
-  cube.className = 'cube';
-  cube.style.transform = `rotate(${data.angle}rad)`;
-  name.innerText = username;
-
-  newPlayer.element.appendChild(cube);
-  newPlayer.element.appendChild(name);
-  document.getElementById('players').appendChild(newPlayer.element);
-  players[username] = newPlayer;
-  return newPlayer;
-}
-
-function updatePlayer(player, data) {
-  if (!data) {
-    return;
-  }
-  if (!player) {
-    return;
-  }
-  if (data.alive === false) {
-    player.element.remove();
-    delete players[data.username];
-  }
-
-  if (data.x !== undefined) {
-    player.element.style.left = `${data.x - camera.x}px`;
-  }
-  if (data.y !== undefined) {
-    player.element.style.top = `${data.y - camera.y}px`;
-  }
-
-  if (data.angle !== undefined) {
-    const cube = player.element.getElementsByClassName('cube')[0];
-    cube.style.transform = `rotate(${data.angle}rad)`;
-  }
-  if (data.directionX !== undefined) {
-    player.direction.x = data.directionX;
-  }
-  if (data.directionY !== undefined) {
-    player.direction.y = data.directionY;
+  getCenterCoordinates() {
+    const { left, top, width, height } = this.element.getBoundingClientRect();
+    return { x: left + width / 2, y: top + height / 2 };
   }
 }
