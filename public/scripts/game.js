@@ -32,33 +32,25 @@ fetch('/verify', {
       return;
     }
     username = data['username'];
-  });
+    const player = new Player(username, {x: 300, y: 300, angle: 0});
+    player.element.id = 'player'
+    player.lastAngle = 0;
+    players[username] = player;
 
+    const websocketProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    socket = new WebSocket(websocketProtocol + '//' + location.host + '/ws')
 
-// Wait for the username to be set
-const onUsernameSet = setInterval(() => {
-  if (!username) {
-    return;
-  }
-  const player = new Player(username, {x: 300, y: 300, angle: 0});
-  player.element.id = 'player'
-  player.lastAngle = 0;
-  players[username] = player;
+    socket.onopen = onSocketOpen;
+    socket.onclose = onSocketClose;
+    socket.onmessage = onSocketMessage;
+    window.onmousemove = onMouseMove;
+    window.onmouseup = onMouseClick;
+    window.onkeydown = onKeyDown;
+    chat.onsubmit = onChatSubmit;
+    chat.onmouseover = onMouseOverChat;
+    chat.onmouseout = onMouseOutChat;
 
-  const websocketProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  socket = new WebSocket(websocketProtocol + '//' + location.host + '/ws')
-  socket.onopen = onSocketOpen;
-  socket.onclose = onSocketClose;
-  socket.onmessage = onSocketMessage;
-  window.onmousemove = onMouseMove;
-  window.onmouseup = onMouseClick;
-  window.onkeydown = onKeyDown;
-  chat.onsubmit = onChatSubmit;
-  chat.onmouseover = onMouseOverChat;
-  chat.onmouseout = onMouseOutChat;
-
-  started = true;
-  clearInterval(onUsernameSet);
+    started = true;
 });
 
 
