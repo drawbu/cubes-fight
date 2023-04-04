@@ -10,6 +10,13 @@ const chatInput = document.getElementById('chat-input');
 let started = false;
 const players = {};
 let hoveringChat = false;
+const background = document.getElementById('background-grid');
+const camera = {
+  x: 0,
+  y: 0,
+  elementX: document.getElementById('position-x'),
+  elementY: document.getElementById('position-y'),
+}
 
 
 // Verify the user_id
@@ -70,8 +77,8 @@ onMouseMove = (event) => {
 onMouseClick = (event) => {
   if (event.button === 0 && !hoveringChat) {
     const player = players[username];
-    player.direction.x = event.clientX - 50;
-    player.direction.y = event.clientY - 50;
+    player.direction.x = event.clientX - 50 + camera.x;
+    player.direction.y = event.clientY - 50 + camera.y;
     socket.send(JSON.stringify({
       player: {
         user_id: user_id,
@@ -94,6 +101,18 @@ onMouseOutChat = () => {
 
 onKeyDown = (event) => {
   console.log(`KeyboardEvent: key='${event.key}' | code='${event.code}'`);
+  if (event.key === 'ArrowRight') {
+    camera.x += 10;
+  }
+  if (event.key === 'ArrowLeft') {
+    camera.x -= 10;
+  }
+  if (event.key === 'ArrowUp') {
+    camera.y -= 10;
+  }
+  if (event.key === 'ArrowDown') {
+    camera.y += 10;
+  }
 };
 
 onChatSubmit = (event) => {
@@ -166,6 +185,11 @@ onSocketMessage = (ev) => {
 // Loops
 const movementLoop = setInterval(() => {
   playerCount.innerText = Object.keys(players).length.toString();
+  camera.elementX.innerText = camera.x;
+  camera.elementY.innerText = camera.y;
+  background.style['background-position-x'] = `${-camera.x}px`;
+  background.style['background-position-y'] = `${-camera.y}px`;
+
   for (const username in players) {
     const player = players[username];
     const move = {
@@ -274,12 +298,14 @@ function updatePlayer(player, data) {
     player.element.remove();
     delete players[data.username];
   }
+
   if (data.x !== undefined) {
-    player.element.style.left = `${data.x}px`;
+    player.element.style.left = `${data.x - camera.x}px`;
   }
   if (data.y !== undefined) {
-    player.element.style.top = `${data.y}px`;
+    player.element.style.top = `${data.y - camera.y}px`;
   }
+
   if (data.angle !== undefined) {
     const cube = player.element.getElementsByClassName('cube')[0];
     cube.style.transform = `rotate(${data.angle}rad)`;
