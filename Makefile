@@ -1,7 +1,5 @@
 V_BIN = venv/bin
 
-ENV = .flaskenv
-
 SERVER_CMD = $(V_BIN)/uvicorn
 SERVER_ARGS = --port 8080
 PROD_BIND =
@@ -12,9 +10,6 @@ $(V_BIN):
 	@ python3 -m venv venv
 	@ chmod +x $(V_BIN)/activate
 	@ ./$(V_BIN)/activate
-
-$(ENV):
-	@ echo 'DEBUG_MODE=false' > $(ENV)
 
 $(SERVER_CMD): $(V_BIN) $(ENV)
 	@ $(V_BIN)/pip install -r requirements.txt
