@@ -1,0 +1,9 @@
+version: '3'
+
+services:
+  cubes:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - /var/run/cubes:/pool/data
